@@ -62,13 +62,14 @@ In Firebase: **Authentication → Settings → Authorized domains → Add domain
 
 1. Open your link and tap **First time here? Set up your password**. Use your admin email.
 2. You'll see sample numbers and a **Finish setup** banner. Open **Setup**.
-3. Check the departments. These six are filled in to start:
+3. Check the departments. These seven are filled in to start:
    - Plumbing
    - Plumbing - New Construction
    - HVAC
    - HVAC - New Construction
    - Electrical
    - Septic
+   - Sales
 4. Type each manager's **name and email**. If one person runs two departments, list their email on both. If two people share a department, separate their emails with a comma.
 5. Under **Others who can view**, add anyone who should only look: owners, office staff, and an account for the wall TV.
 6. Tap **Save setup**.
