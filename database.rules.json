@@ -1,0 +1,22 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "mmr": {
+      ".read": "auth != null && (auth.token.email == 'ron@owenscomfortsolution.com' || root.child('mmr/members/' + auth.token.email.replace('.', ',')).exists())",
+      "config": {
+        ".write": "auth != null && auth.token.email == 'ron@owenscomfortsolution.com'"
+      },
+      "members": {
+        ".write": "auth != null && auth.token.email == 'ron@owenscomfortsolution.com'"
+      },
+      "reports": {
+        "$month": {
+          "$dept": {
+            ".write": "auth != null && (auth.token.email == 'ron@owenscomfortsolution.com' || root.child('mmr/members/' + auth.token.email.replace('.', ',') + '/depts/' + $dept).val() == true)"
+          }
+        }
+      }
+    }
+  }
+}

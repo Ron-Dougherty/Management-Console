@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f3864">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mgr Report">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script src="config.js"></script>
+<title>Managers' Monthly Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: top bar (title, month, tabs) then summary-first: who's in -> headline tiles -> department table -> issues & projects */
+  --bg:#edf1f4; --surface:#ffffff; --surface-2:#f5f7f9; --ink:#14202b; --muted:#5a6773; --line:#d8dfe6;
+  --accent:#0d5c9e; --accent-ink:#ffffff; --accent-soft:#e2edf7; --flame:#d55f27;
+  --good:#1b7a44; --good-soft:#e1f2e7; --bad:#bb3127; --bad-soft:#fae6e3; --warn:#9a630f; --warn-soft:#fbf0dc;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow","Segoe UI",Arial,sans-serif;
+  --radius:10px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0c131a; --surface:#141e28; --surface-2:#1a2632; --ink:#e6ecf2; --muted:#98a6b3; --line:#263544;
+    --accent:#4da2ea; --accent-ink:#06121d; --accent-soft:#16304a; --flame:#f08a52;
+    --good:#4cc782; --good-soft:#163527; --bad:#f07a6e; --bad-soft:#3d1c1a; --warn:#e7b25a; --warn-soft:#3a2c12;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0c131a; --surface:#141e28; --surface-2:#1a2632; --ink:#e6ecf2; --muted:#98a6b3; --line:#263544;
+  --accent:#4da2ea; --accent-ink:#06121d; --accent-soft:#16304a; --flame:#f08a52;
+  --good:#4cc782; --good-soft:#163527; --bad:#f07a6e; --bad-soft:#3d1c1a; --warn:#e7b25a; --warn-soft:#3a2c12;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font-family:var(--body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+h1,h2,h3,h4{font-family:var(--display);font-weight:700;letter-spacing:.01em;margin:0;text-wrap:balance}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.num-t{font-variant-numeric:tabular-nums}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+
+/* top bar */
+.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.top-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding:12px 0 8px}
+.brand{display:flex;flex-direction:column;min-width:0}
+.brand .co{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.brand h1{font-size:26px;line-height:1.05;text-transform:uppercase}
+.monthpick{display:flex;align-items:center;gap:6px}
+.monthpick select{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:7px 12px;font-family:var(--display);font-weight:600;font-size:20px;min-width:170px;text-align:center;cursor:pointer}
+.iconbtn{border:1px solid var(--line);background:var(--surface-2);border-radius:8px;width:38px;height:38px;display:grid;place-items:center;cursor:pointer;font-size:18px;line-height:1}
+.iconbtn:hover{border-color:var(--accent)}
+.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding-bottom:0}
+.tabs::-webkit-scrollbar{display:none}
+.tab{border:0;background:none;padding:9px 14px 11px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+.tab[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab:hover{color:var(--ink)}
+
+main{padding:18px 0 48px}
+.stack{display:flex;flex-direction:column;gap:18px}
+.banner{border-radius:var(--radius);padding:12px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;border:1px solid var(--line);background:var(--surface)}
+.banner.sample{background:var(--warn-soft);border-color:transparent;color:var(--ink)}
+.banner.sample b{color:var(--warn)}
+.banner.info{background:var(--accent-soft);border-color:transparent}
+.banner.err{background:var(--bad-soft);border-color:transparent}
+.banner p{margin:0;flex:1 1 260px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad)}
+.btn[disabled]{opacity:.55;cursor:default}
+.linkbtn{border:0;background:none;padding:0;color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+
+.sec-h{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 12px;margin-bottom:10px}
+.sec-h h2{font-size:22px;text-transform:uppercase}
+.sec-h .note{color:var(--muted);font-size:14px}
+
+/* who's in */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:14px}
+.chip .dot{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700}
+.chip.in .dot{background:var(--good);color:#fff}
+.chip.out{border-style:dashed}
+.chip.out .dot{border:2px solid var(--warn)}
+.chip b{font-weight:600}
+.chip .who{color:var(--muted)}
+
+/* tiles */
+.tiles-rev{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile .lbl{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tile .big{font-family:var(--display);font-weight:700;font-size:38px;line-height:1.05;font-variant-numeric:tabular-nums}
+.tile .big small{font-size:.55em;font-weight:600;color:var(--muted)}
+.tile .sub{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tile .sub b{color:var(--ink);font-weight:600}
+.tile.rev{border-top:4px solid var(--accent)}
+.tile .cmp{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tile .cmp + .cmp{border-top:1px dashed var(--line);padding-top:6px;margin-top:4px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-weight:700;font-size:13px;font-variant-numeric:tabular-nums}
+.pill.up{background:var(--good-soft);color:var(--good)}
+.pill.down{background:var(--bad-soft);color:var(--bad)}
+.pill.flat{background:var(--surface-2);color:var(--muted)}
+
+/* comparison table */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}
+.tablewrap{overflow-x:auto;border-radius:var(--radius)}
+table.cmp{border-collapse:separate;border-spacing:0;width:100%;min-width:560px;font-variant-numeric:tabular-nums;font-size:15px}
+table.cmp th,table.cmp td{padding:7px 12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+table.cmp thead th{font-family:var(--display);font-size:17px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;background:var(--surface-2);position:sticky;top:0;white-space:normal;min-width:7.5em;vertical-align:bottom;line-height:1.1;text-wrap:balance}
+table.cmp th:first-child,table.cmp td:first-child{text-align:left;position:sticky;left:0;background:var(--surface);z-index:1}
+table.cmp thead th:first-child{background:var(--surface-2);z-index:2}
+table.cmp tr.grp td{background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:13px;letter-spacing:.07em;text-transform:uppercase;text-align:left}
+table.cmp tr.grp td:first-child{background:var(--accent-soft)}
+table.cmp tr.sub td{color:var(--muted);font-style:italic;font-size:14px}
+table.cmp tr.sub td:first-child{padding-left:24px}
+table.cmp td.tot,table.cmp th.tot{font-weight:700;background:var(--surface-2)}
+table.cmp tr td.up,table.cmp tr.sub td.up{color:var(--good);font-weight:700;font-style:normal}
+table.cmp tr td.down,table.cmp tr.sub td.down{color:var(--bad);font-weight:700;font-style:normal}
+table.cmp td.na{color:var(--muted)}
+table.cmp tbody tr:last-child td{border-bottom:0}
+
+/* department lists */
+.depts{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px}
+.dept{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.dept-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-bottom:2px solid var(--ink);padding-bottom:6px}
+.dept-h h3{font-size:22px;text-transform:uppercase}
+.dept-h span{color:var(--muted);font-size:14px;text-align:right}
+.lst h4{font-family:var(--body);font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;margin-bottom:3px;display:flex;align-items:center;gap:6px}
+.lst h4 i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.lst.done h4 i{background:var(--good)}
+.lst.open h4 i{background:var(--flame)}
+.lst ul{margin:0;padding-left:18px}
+.lst li{margin:2px 0}
+.lst .none{color:var(--muted);font-size:14px;font-style:italic;margin:0}
+.dept.waiting{border-style:dashed;color:var(--muted)}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.status-msg{font-size:14px;color:var(--muted)}
+.status-msg.ok{color:var(--good)}
+.status-msg.bad{color:var(--bad)}
+
+/* entry form */
+.form{display:flex;flex-direction:column;gap:14px}
+.fsec{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px 16px}
+.fsec > h3{font-size:20px;text-transform:uppercase;margin-bottom:10px;display:flex;gap:10px;align-items:baseline}
+.fsec > h3 .n{color:var(--accent)}
+.fsec > p.hint{margin:-6px 0 10px;color:var(--muted);font-size:14px}
+.who-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld > span{font-size:13px;font-weight:600;color:var(--muted)}
+.fld input,.fld select,.fld textarea{border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:9px 11px;width:100%;min-width:0}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--accent);background:var(--surface);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+.fld input.num{text-align:right;font-variant-numeric:tabular-nums;font-size:17px}
+.fld textarea{resize:vertical;min-height:110px;line-height:1.4}
+.prow{display:grid;grid-template-columns:150px 1fr 1fr 1fr;gap:10px 12px;align-items:end;padding:10px 0;border-top:1px solid var(--line)}
+.prow:first-of-type{border-top:0;padding-top:0}
+.prow .rl{font-weight:700;font-size:17px;align-self:center}
+.calc{display:flex;flex-direction:column;gap:4px}
+.calc span{font-size:13px;font-weight:600;color:var(--muted)}
+.calc b{padding:9px 11px;border-radius:8px;background:var(--surface-2);border:1px dashed var(--line);text-align:right;font-variant-numeric:tabular-nums;font-size:17px;min-height:42px}
+.calc b.up{color:var(--good)} .calc b.down{color:var(--bad)}
+.revgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 12px}
+.revblock + .revblock{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.revblock h4{font-size:18px;text-transform:uppercase;margin-bottom:8px}
+.lists{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.savebar{position:sticky;bottom:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;box-shadow:0 -6px 18px rgba(0,0,0,.06)}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:var(--radius);padding:22px;text-align:center;color:var(--muted)}
+.empty h3{color:var(--ink);font-size:22px;margin-bottom:6px}
+
+/* setup */
+.drow{display:grid;grid-template-columns:1.2fr 1fr 1.4fr auto;gap:10px;align-items:end;padding:10px 0;border-top:1px solid var(--line)}
+.drow:first-child{border-top:0}
+.drow .btns{display:flex;gap:6px}
+
+/* modal */
+.modal-bg{position:fixed;inset:0;background:rgba(5,10,15,.55);display:grid;place-items:center;z-index:50;padding:16px}
+.modal{background:var(--surface);border-radius:12px;max-width:420px;width:100%;padding:18px;display:flex;flex-direction:column;gap:12px;border:1px solid var(--line)}
+.modal h3{font-size:22px}
+.modal p{margin:0;color:var(--muted)}
+.modal .row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+
+/* phone */
+@media (max-width:640px){
+  .top{position:static}
+  .brand h1{font-size:22px}
+  .monthpick select{min-width:0;font-size:18px}
+  .tile .big{font-size:32px}
+  .prow{grid-template-columns:1fr 1fr 1fr}
+  .prow .rl{grid-column:1/-1}
+  .revgrid{grid-template-columns:1fr 1fr}
+  .revgrid .calc{grid-column:1/-1;flex-direction:row;justify-content:space-between;align-items:center}
+  .revgrid .calc b{min-width:110px}
+  .drow{grid-template-columns:1fr 1fr}
+  .drow .em,.drow .btns{grid-column:1/-1}
+}
+
+/* TV / wall monitor */
+.tv{position:fixed;inset:0;z-index:40;overflow:hidden;display:flex;flex-direction:column;
+  --bg:#08111a; --surface:#0f1b27; --surface-2:#142333; --ink:#eef3f8; --muted:#8fa1b3; --line:#22374b;
+  --accent:#58aef0; --accent-soft:#12304b; --flame:#f28b4f; --good:#55d08c; --good-soft:#123425; --bad:#ff7d70; --bad-soft:#3d1b19;
+  background:var(--bg);color:var(--ink);color-scheme:dark;
+  font-size:clamp(13px, .9vw + .7vh, 38px);padding:2.2em 2.6em 1.4em}
+.tv-head{display:flex;justify-content:space-between;align-items:flex-end;gap:1em;border-bottom:.12em solid var(--line);padding-bottom:.6em;margin-bottom:1.1em}
+.tv-head .k{font-size:.8em;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.tv-head h2{font-size:2.6em;line-height:1;text-transform:uppercase}
+.tv-head .r{text-align:right}
+.tv-head .r .m{font-family:var(--display);font-weight:700;font-size:2em;color:var(--accent);line-height:1}
+.tv-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:1em}
+.tv-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:1em}
+.tv-tiles.two{grid-template-columns:repeat(2,1fr)}
+.tv-tile{background:var(--surface);border:1px solid var(--line);border-radius:.5em;padding:.8em 1em;display:flex;flex-direction:column;gap:.25em;min-width:0}
+.tv-tile .lbl{font-size:.8em;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.tv-tile .big{font-family:var(--display);font-weight:700;font-size:3.2em;line-height:1;font-variant-numeric:tabular-nums}
+.tv-tile.hero .big{font-size:4.4em}
+.tv-tile.hero{border-top:.25em solid var(--accent)}
+.tv-tile .sub{color:var(--muted);font-variant-numeric:tabular-nums}
+.tv-tile .sub b{color:var(--ink)}
+.tv .pill{font-size:.85em;padding:.05em .55em}
+.tv table.cmp{font-size:.9em;min-width:0}
+.tv table.cmp th,.tv table.cmp td{padding:.26em .7em}
+.tv table.cmp thead th{font-size:1.15em;position:static}
+.tv table.cmp tr.sub td{font-size:.9em}
+.tv-body.ov{display:grid;grid-template-rows:1.3fr 1fr;gap:1em}
+.tv-body.ov .tv-tiles{min-height:0}
+.tv-body.ov .tv-tile{justify-content:center}
+.tv-body.ov .tv-tile .big{font-size:4.2em}
+.tv-body.ov .tv-tile.hero .big{font-size:6em}
+.tv-body.ov .tv-tile .sub{font-size:1.15em}
+.tv table.cmp th:first-child,.tv table.cmp td:first-child{position:static}
+.tv .depts{grid-template-columns:repeat(2,1fr);gap:1em}
+.tv .lst h4{font-size:.8em}
+.tv .lst li{margin:.15em 0}
+.tv-dept{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:1.4em;flex:1;min-height:0}
+.tv-dept .tv-tiles{grid-template-columns:repeat(2,1fr);grid-auto-rows:1fr}
+.tv-dept .tv-tile{justify-content:center}
+.tv-lists{font-size:1.15em}
+.tv-dept .tv-tile .big{font-size:2.5em}
+.tv-lists{display:grid;grid-template-columns:1fr 1fr;gap:1em 1.4em;align-content:start}
+.tv-foot{display:flex;align-items:center;gap:1em;margin-top:1em;transition:opacity .4s}
+.tv-foot.hide{opacity:0}
+.tv-dots{display:flex;gap:.45em;flex:1}
+.tv-dots button{width:.8em;height:.8em;border-radius:50%;border:0;background:var(--line);padding:0;cursor:pointer}
+.tv-dots button[aria-current="true"]{background:var(--accent)}
+.tv-foot .btn{background:var(--surface);border-color:var(--line);color:var(--ink);font-size:.8em}
+.tv-bar{position:absolute;left:0;bottom:0;height:.25em;background:var(--accent);width:0}
+.tv-live{font-size:.75em;color:var(--muted)}
+.tv-empty{flex:1;display:grid;place-items:center;text-align:center;color:var(--muted);font-size:1.4em}
+.tv .sample-tag{display:inline-block;background:var(--flame);color:#1a0b02;font-weight:700;font-size:.7em;letter-spacing:.1em;padding:.15em .6em;border-radius:.3em;text-transform:uppercase;vertical-align:middle;margin-left:.6em}
+
+@media (prefers-reduced-motion: reduce){ .tv-foot{transition:none} }
+
+/* sign-in, footer, safe areas */
+.top{padding-top:env(safe-area-inset-top)}
+body.gated .tabs,body.gated .monthpick{display:none}
+.gate{display:grid;justify-items:center;padding:12px 0}
+.gate-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px;max-width:440px;width:100%;display:flex;flex-direction:column;gap:12px}
+.gate-card h2{font-size:30px;text-transform:uppercase}
+.gate-card .hint{margin:0;color:var(--muted)}
+.gate-links{display:flex;flex-wrap:wrap;gap:10px 20px}
+.foot{padding:4px 16px calc(24px + env(safe-area-inset-bottom));color:var(--muted);font-size:14px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:space-between}
+.foot b{color:var(--ink);font-weight:600}
+.savebar{padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+.linkrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.linkrow code{background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:7px 10px;font-size:14px;word-break:break-all;flex:1 1 220px}
+.print-head{display:none}
+
+/* printing: landscape, light colors, no controls */
+@page{size:letter landscape;margin:.4in}
+@media print{
+  :root,:root[data-theme]{--bg:#fff;--surface:#fff;--surface-2:#f2f4f6;--ink:#111;--muted:#555;--line:#c9d0d6;--accent:#0d5c9e;--accent-soft:#e4edf6;--good:#1b7a44;--good-soft:#e1f2e7;--bad:#bb3127;--bad-soft:#fae6e3;--warn:#9a630f;color-scheme:light}
+  html,body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{font-size:11px}
+  .top,.toolbar,.banner,.savebar,.foot,#topnote,#tv-root,.sec-who,.sec-h .note{display:none!important}
+  table.cmp tr.sub td{font-size:10px}
+  .wrap{max-width:none;padding:0}
+  main{padding:0}
+  .print-head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid #111;padding-bottom:4px}
+  .print-head h2{font-size:20px;text-transform:uppercase}
+  .stack{gap:10px}
+  .sec-h{margin-bottom:4px}
+  .sec-h h2{font-size:15px}
+  .tiles-rev{grid-template-columns:1fr 1fr;gap:8px}
+  .tiles{grid-template-columns:repeat(5,1fr);gap:8px}
+  .tile{padding:8px 10px}
+  .tile .big{font-size:22px}
+  .tablewrap{overflow:visible}
+  table.cmp{min-width:0;font-size:10px}
+  table.cmp th,table.cmp td{padding:2px 6px;position:static!important}
+  table.cmp thead th{font-size:11px;min-width:0}
+  .sec-table{break-before:page}
+  .sec-lists{break-before:page}
+  .depts{grid-template-columns:repeat(3,1fr);gap:8px}
+  .dept,.tile{break-inside:avoid}
+  .dept{padding:8px 10px;gap:6px}
+  .dept-h h3{font-size:16px}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="top-row">
+      <div class="brand">
+        <span class="co" id="co-name">Managers' meeting</span>
+        <h1>Monthly Report</h1>
+      </div>
+      <div class="monthpick">
+        <button class="iconbtn" id="m-prev" type="button" aria-label="Previous month">&#8249;</button>
+        <select id="m-sel" aria-label="Report month"></select>
+        <button class="iconbtn" id="m-next" type="button" aria-label="Next month">&#8250;</button>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Views">
+      <button class="tab" type="button" data-view="summary">Summary</button>
+      <button class="tab" type="button" data-view="enter">Enter report</button>
+      <button class="tab" type="button" data-view="tv">TV mode</button>
+      <button class="tab" type="button" data-view="setup" id="tab-setup" hidden>Setup</button>
+    </nav>
+  </div>
+</header>
+<div class="wrap" id="topnote"></div>
+<main class="wrap" id="main" aria-live="polite"></main>
+<footer class="wrap foot" id="foot"></footer>
+<div id="tv-root"></div>
+<div id="modal-root"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ------------------------------------------------------------------ definitions */
+var DEFAULT_DEPTS = [
+  {id:"plumbing", name:"Plumbing", manager:"", emails:""},
+  {id:"plumbing-new-construction", name:"Plumbing - New Construction", manager:"", emails:""},
+  {id:"hvac", name:"HVAC", manager:"", emails:""},
+  {id:"hvac-new-construction", name:"HVAC - New Construction", manager:"", emails:""},
+  {id:"electrical", name:"Electrical", manager:"", emails:""},
+  {id:"septic", name:"Septic", manager:"", emails:""}
+];
+
+var PAIRS = [
+  {id:"jobs", label:"Jobs", a:{k:"jobsCreated", label:"Created"}, b:{k:"jobsCompleted", label:"Completed"},
+   rate:{label:"Completion rate", f:"pct", fn:function(m){return ratio(m.jobsCompleted, m.jobsCreated);}}},
+  {id:"est", label:"Estimates", a:{k:"estGiven", label:"Given"}, b:{k:"estSold", label:"Sold"},
+   rate:{label:"Close rate", f:"pct", fn:function(m){return ratio(m.estSold, m.estGiven);}}},
+  {id:"calls", label:"Calls", a:{k:"callsIn", label:"Inbound received"}, b:{k:"callsOut", label:"Outbound made"},
+   rate:{label:"Total calls", f:"int", fn:function(m){return sumN(m.callsIn, m.callsOut);}}}
+];
+var QUAL = [
+  {id:"recalls", label:"Recalls", a:{k:"recalls", label:"How many"}, b:{k:"recallCost", label:"Cost ($)", usd:true}},
+  {id:"red", label:"Red tags", a:{k:"redTags", label:"How many"}, b:{k:"redTagCost", label:"Cost ($)", usd:true},
+   rate:{label:"Recalls + red tags cost", f:"usd", fn:function(m){return sumN(m.recallCost, m.redTagCost);}}},
+  {id:"insp", label:"Inspections", a:{k:"inspPassed", label:"Passed"}, b:{k:"inspDone", label:"Completed (optional)"},
+   rate:{label:"Pass rate", f:"pct", fn:function(m){return ratio(m.inspPassed, m.inspDone);}}}
+];
+var REV = [
+  {id:"jobsRev", label:"Completed jobs", k:["jobsRev","jobsRevLY","jobsRevYTD","jobsRevYTDLY"]},
+  {id:"estRev", label:"Sold estimates", k:["estRev","estRevLY","estRevYTD","estRevYTDLY"]}
+];
+var LISTS = [
+  {k:"issuesDone", label:"Problems / issues addressed", kind:"done"},
+  {k:"issuesOpen", label:"Problems / issues to address", kind:"open"},
+  {k:"projectsDone", label:"Projects completed", kind:"done"},
+  {k:"projectsOpen", label:"Projects still working on", kind:"open"}
+];
+var USD_KEYS = {recallCost:1, redTagCost:1};
+REV.forEach(function(r){ r.k.forEach(function(k){ USD_KEYS[k]=1; }); });
+var ALL_KEYS = [];
+PAIRS.concat(QUAL).forEach(function(p){ ALL_KEYS.push(p.a.k, p.b.k); });
+REV.forEach(function(r){ ALL_KEYS.push.apply(ALL_KEYS, r.k); });
+
+function revRows(prefix, label, short){
+  var k = prefix;
+  return [
+    {group:label},
+    {id:k, label:"Report month", tvLabel:short, f:"usd", get:function(m){return m[k];}},
+    {id:k+"LY", label:"Same month last year", f:"usd", get:function(m){return m[k+"LY"];}},
+    {id:k+"Chg", label:"Change vs. last year", tvLabel:"vs. last year", f:"chg", sub:true, get:function(m){return chg(m[k], m[k+"LY"]);}},
+    {id:k+"YTD", label:"Year to date", tvLabel:short+" YTD", f:"usd", get:function(m){return m[k+"YTD"];}},
+    {id:k+"YTDLY", label:"YTD last year", f:"usd", get:function(m){return m[k+"YTDLY"];}},
+    {id:k+"YTDChg", label:"Change vs. last year", tvLabel:"vs. last year", f:"chg", sub:true, get:function(m){return chg(m[k+"YTD"], m[k+"YTDLY"]);}}
+  ];
+}
+function key(k, label, f){ return {id:k, label:label, f:f||"int", get:function(m){return m[k];}}; }
+var ROWS = [
+  {group:"Activity"},
+  key("jobsCreated","Jobs created"), key("jobsCompleted","Jobs completed"),
+  {id:"completionRate", label:"Completion rate", f:"pct", sub:true, get:function(m){return ratio(m.jobsCompleted,m.jobsCreated);}},
+  key("estGiven","Estimates given"), key("estSold","Estimates sold"),
+  {id:"closeRate", label:"Close rate", f:"pct", sub:true, get:function(m){return ratio(m.estSold,m.estGiven);}},
+  key("callsIn","Inbound calls received"), key("callsOut","Outbound calls made"),
+  {group:"Recalls, red tags & inspections"},
+  key("recalls","Recalls"), key("recallCost","Recalls cost","usd"),
+  key("redTags","Red tags"), key("redTagCost","Red tags cost","usd"),
+  {id:"qualityCost", label:"Recalls + red tags cost", f:"usd", strong:true, get:function(m){return sumN(m.recallCost,m.redTagCost);}},
+  key("inspPassed","Inspections passed"), key("inspDone","Inspections completed"),
+  {id:"passRate", label:"Pass rate", f:"pct", sub:true, get:function(m){return ratio(m.inspPassed,m.inspDone);}}
+].concat(revRows("jobsRev","Completed jobs revenue","Completed jobs $"), revRows("estRev","Sold estimates","Sold estimates $"));
+var TV_ROWS = ["jobsCompleted","completionRate","estSold","closeRate","jobsRev","jobsRevChg","jobsRevYTD","jobsRevYTDChg","estRev","estRevChg","recalls","redTags","qualityCost","passRate"];
+
+/* ------------------------------------------------------------------ helpers */
+function isNum(v){ return typeof v === "number" && isFinite(v); }
+function ratio(a,b){ return (isNum(a) && isNum(b) && b > 0) ? a/b : null; }
+function chg(a,b){ return (isNum(a) && isNum(b) && b > 0) ? (a-b)/b : null; }
+function sumN(){ var s=null; for (var i=0;i<arguments.length;i++){ if(isNum(arguments[i])) s=(s||0)+arguments[i]; } return s; }
+function parseNum(v){ if (v==null) return null; var t=String(v).replace(/[^0-9.\-]/g,""); if (t===""||t==="-"||t===".") return null; var n=Number(t); return isFinite(n)?n:null; }
+var NF = new Intl.NumberFormat("en-US",{maximumFractionDigits:0});
+function fmt(v,f){
+  if (!isNum(v)) return "—";
+  if (f==="usd") return (v<0?"-$":"$")+NF.format(Math.abs(Math.round(v)));
+  if (f==="pct") return (v*100).toFixed(1)+"%";
+  if (f==="chg") return (v>0?"+":v<0?"−":"")+Math.abs(v*100).toFixed(1)+"%";
+  return NF.format(Math.round(v));
+}
+function usdShort(v){
+  if (!isNum(v)) return "—";
+  var a=Math.abs(v), s=v<0?"-$":"$";
+  if (a>=1e6) return s+(a/1e6).toFixed(a>=1e7?1:2)+"M";
+  if (a>=1e4) return s+(a/1e3).toFixed(a>=1e5?0:1)+"K";
+  return s+NF.format(Math.round(a));
+}
+function dir(v){ return !isNum(v) ? "" : v>0.0005 ? "up" : v<-0.0005 ? "down" : "flat"; }
+function pill(v){ if(!isNum(v)) return ""; return '<span class="pill '+dir(v)+'">'+fmt(v,"chg")+"</span>"; }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+function ym(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
+function addMonths(m,n){ var p=m.split("-"); var d=new Date(+p[0], +p[1]-1+n, 1); return ym(d); }
+function monthLabel(m,short){ var p=m.split("-"); var d=new Date(+p[0], +p[1]-1, 1); return d.toLocaleDateString("en-US",{month:short?"short":"long", year:"numeric"}); }
+function defaultMonth(){ var d=new Date(); return ym(new Date(d.getFullYear(), d.getMonth()-1, 1)); }
+function whenLabel(iso){ if(!iso) return ""; var d=new Date(iso); if(isNaN(d)) return ""; return d.toLocaleDateString("en-US",{month:"short", day:"numeric"})+", "+d.toLocaleTimeString("en-US",{hour:"numeric", minute:"2-digit"}); }
+function slug(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,40) || "dept"; }
+function store(k,v){ try{ if(v==null) localStorage.removeItem(k); else localStorage.setItem(k,v); }catch(e){} }
+function recall(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function $(id){ return document.getElementById(id); }
+function cleanList(arr){ if (arr && typeof arr==="object" && !Array.isArray(arr)) arr=Object.keys(arr).sort(function(a,b){return a-b;}).map(function(k){return arr[k];}); return Array.isArray(arr) ? arr.filter(function(x){return typeof x==="string" && x.trim();}) : []; }
+function cleanReport(x){
+  if (!x || typeof x!=="object") return null;
+  var m={}, src=(x.m && typeof x.m==="object")?x.m:{};
+  ALL_KEYS.forEach(function(k){ m[k]=isNum(src[k])?src[k]:null; });
+  var lists={}, ls=(x.lists && typeof x.lists==="object")?x.lists:{};
+  LISTS.forEach(function(l){ lists[l.k]=cleanList(ls[l.k]); });
+  return {month:String(x.month||""), dept:String(x.dept||""), manager:typeof x.manager==="string"?x.manager:"", m:m, lists:lists, updatedAt:typeof x.updatedAt==="string"?x.updatedAt:""};
+}
+
+/* ------------------------------------------------------------------ state */
+var CFG = window.MMR_CONFIG || {};
+var S = {
+  month: defaultMonth(), view: "summary",
+  auth: "loading", user: null, isAdmin: false, member: null, memberLoaded: false, denied: false,
+  loginMode: "signin", loginEmail: "",
+  config: null, configLoaded: false,
+  reports: {}, reportsLoaded: false,
+  slow: false, dbError: null, online: true, offline: false,
+  demo: false, demoAuto: false,
+  enterDept: recall("mmr-dept") || "",
+  formKey: null, formDirty: false, formStale: false, saveMsg: null, saving: false,
+  tvIndex: 0, tvPaused: false, tvElapsed: 0, setupMsg: null
+};
+var F = null, fbApp = null, auth = null, fdb = null;
+var subs = [], unsubReports = null, slowTimer = null, offTimer = null;
+
+function adminEmail(){ return String(CFG.adminEmail || "").trim().toLowerCase(); }
+function ekey(e){ return String(e || "").trim().toLowerCase().replace(/\./g, ","); }
+function configReady(){
+  var f = CFG.firebase || {};
+  return !!(f.apiKey && f.databaseURL && !/^PASTE/i.test(f.apiKey) && String(f.databaseURL).indexOf("your-project") < 0);
+}
+function toArray(v){
+  if (Array.isArray(v)) return v;
+  if (v && typeof v === "object") return Object.keys(v).sort(function(a,b){ return a - b; }).map(function(k){ return v[k]; });
+  return [];
+}
+function depts(){
+  var list = toArray(S.config && S.config.departments).filter(function(d){ return d && d.id && d.name; });
+  if (list.length) return list.map(function(d){ return {id:String(d.id), name:String(d.name), manager:typeof d.manager === "string" ? d.manager : "", emails:typeof d.emails === "string" ? d.emails : ""}; });
+  return S.demo ? DEFAULT_DEPTS : [];
+}
+function hasSetup(){ return toArray(S.config && S.config.departments).length > 0; }
+function company(){ return (S.config && typeof S.config.company === "string" && S.config.company.trim()) || String(CFG.companyName || "").trim(); }
+function canEditDept(id){ return S.isAdmin || !!(S.member && S.member.depts && S.member.depts[id] === true); }
+function myDepts(){ return depts().filter(function(d){ return canEditDept(d.id); }); }
+function isLoading(){ return S.auth === "in" && (!S.configLoaded || !S.memberLoaded || (!S.reportsLoaded && !S.slow)); }
+function errText(e){ var c = String((e && (e.code || e.message)) || ""); return /permission/i.test(c) ? "permission" : (c || "error"); }
+
+/* ------------------------------------------------------------------ data connection (Firebase) */
+var FB_URL = "https://www.gstatic.com/firebasejs/10.12.2/";
+
+function startSlowTimer(){
+  clearTimeout(slowTimer); S.slow = false;
+  slowTimer = setTimeout(function(){ if (!S.reportsLoaded || !S.configLoaded){ S.slow = true; render(); } }, 10000);
+}
+function clearSlow(){ if (S.reportsLoaded && S.configLoaded){ clearTimeout(slowTimer); S.slow = false; } }
+
+function subscribeMonth(){
+  if (!fdb || S.auth !== "in" || S.denied) return;
+  if (unsubReports){ unsubReports(); unsubReports = null; }
+  S.reportsLoaded = false; S.reports = {};
+  startSlowTimer();
+  var month = S.month;
+  unsubReports = F.onValue(F.ref(fdb, "mmr/reports/" + month), function(snap){
+    var v = snap.val() || {}, r = {};
+    Object.keys(v).forEach(function(k){ var x = cleanReport(Object.assign({}, v[k], {dept:k, month:month})); if (x) r[k] = x; });
+    S.reports = r; S.reportsLoaded = true; clearSlow();
+    if (Object.keys(r).length && S.demoAuto){ S.demo = false; S.demoAuto = false; }
+    onReportsChanged();
+  }, function(err){ S.dbError = errText(err); S.reportsLoaded = true; clearSlow(); render(); });
+}
+
+function stopData(){
+  subs.forEach(function(u){ try { u(); } catch(e){} });
+  subs = [];
+  if (unsubReports){ try { unsubReports(); } catch(e){} unsubReports = null; }
+  clearTimeout(slowTimer); clearTimeout(offTimer);
+}
+
+function startData(){
+  stopData();
+  S.denied = false; S.member = null; S.memberLoaded = false; S.config = null; S.configLoaded = false;
+  S.reports = {}; S.reportsLoaded = false; S.dbError = null; S.demo = false; S.demoAuto = false; S.slow = false;
+  subs.push(F.onValue(F.ref(fdb, ".info/connected"), function(s){ setOnline(s.val() === true); }));
+  subs.push(F.onValue(F.ref(fdb, "mmr/members/" + ekey(S.user.email)), function(s){
+    S.member = s.val(); S.memberLoaded = true; render();
+  }, function(err){
+    S.memberLoaded = true;
+    if (errText(err) === "permission" && !S.isAdmin){ S.denied = true; stopData(); }
+    else S.dbError = errText(err);
+    render();
+  }));
+  subs.push(F.onValue(F.ref(fdb, "mmr/config"), function(s){
+    S.config = s.val(); S.configLoaded = true; clearSlow(); render();
+  }, function(err){ S.configLoaded = true; if (errText(err) !== "permission") S.dbError = errText(err); render(); }));
+  subscribeMonth();
+  F.get(F.query(F.ref(fdb, "mmr/reports"), F.limitToFirst(1))).then(function(s){
+    if (!s.exists() && !Object.keys(S.reports).length){ S.demo = true; S.demoAuto = true; render(); }
+  }).catch(function(){});
+}
+
+function setOnline(on){
+  S.online = on;
+  clearTimeout(offTimer);
+  if (on){ if (S.offline){ S.offline = false; renderTopNote(); } }
+  else offTimer = setTimeout(function(){ S.offline = true; renderTopNote(); }, 4000);
+}
+function renderTopNote(){
+  var el = $("topnote");
+  el.innerHTML = (S.offline && S.auth === "in") ? '<div class="banner err" style="margin-top:12px"><p><b>No connection.</b> You can keep typing; anything you save will send when you\'re back online.</p></div>' : "";
+}
+
+function init(){
+  if (!configReady()){ S.auth = "noconfig"; render(); return; }
+  Promise.all([import(FB_URL + "firebase-app.js"), import(FB_URL + "firebase-auth.js"), import(FB_URL + "firebase-database.js")]).then(function(m){
+    F = Object.assign({}, m[0], m[1], m[2]);
+    fbApp = F.initializeApp(CFG.firebase);
+    auth = F.getAuth(fbApp);
+    fdb = F.getDatabase(fbApp);
+    F.onAuthStateChanged(auth, function(u){
+      if (u){
+        S.user = u; S.auth = "in";
+        S.isAdmin = !!adminEmail() && String(u.email || "").toLowerCase() === adminEmail();
+        startData();
+      } else {
+        stopData();
+        S.user = null; S.auth = "out"; S.isAdmin = false; S.member = null; S.denied = false;
+        S.config = null; S.reports = {};
+      }
+      renderTopNote(); render();
+    });
+  }).catch(function(){ S.auth = "loadfail"; render(); });
+}
+
+/* ------------------------------------------------------------------ month picker + tabs */
+function fillMonths(){
+  var sel = $("m-sel"), cur = ym(new Date()), opts = [], m = addMonths(cur, -36);
+  while (m <= cur){ opts.push(m); m = addMonths(m, 1); }
+  if (opts.indexOf(S.month) < 0) opts.push(S.month);
+  opts.sort().reverse();
+  sel.innerHTML = opts.map(function(o){ return '<option value="' + o + '"' + (o === S.month ? " selected" : "") + ">" + esc(monthLabel(o)) + "</option>"; }).join("");
+  $("m-next").disabled = S.month >= cur;
+}
+function setMonth(m){
+  if (m === S.month) return;
+  guardDirty(function(){
+    S.month = m; S.formKey = null; S.formDirty = false; S.saveMsg = null; S.formStale = false;
+    fillMonths(); subscribeMonth(); render();
+  });
+}
+$("m-sel").addEventListener("change", function(e){ var v = e.target.value; e.target.value = S.month; setMonth(v); });
+$("m-prev").addEventListener("click", function(){ setMonth(addMonths(S.month, -1)); });
+$("m-next").addEventListener("click", function(){ var n = addMonths(S.month, 1); if (n <= ym(new Date())) setMonth(n); });
+document.querySelectorAll(".tab").forEach(function(b){ b.addEventListener("click", function(){ go(b.getAttribute("data-view")); }); });
+
+var VIEWS = ["summary", "enter", "tv", "setup"];
+function go(v){
+  if (VIEWS.indexOf(v) < 0) v = "summary";
+  if (v === S.view){ if (location.hash.slice(1) !== v) setHash(v); if (v !== "tv") render(); return; }
+  guardDirty(function(){
+    if (S.view === "enter"){ S.formKey = null; S.formDirty = false; S.saveMsg = null; }
+    if (S.view === "setup") setupDraft = null;
+    S.view = v; setHash(v);
+    if (v === "tv" && S.auth === "in" && !S.denied) enterTV(); else exitTVDom();
+    render();
+  });
+}
+function setHash(v){ try { if (location.hash.slice(1) !== v) history.replaceState(null, "", "#" + v); } catch(e){ try { location.hash = v; } catch(e2){} } }
+window.addEventListener("hashchange", function(){ var v = location.hash.slice(1); if (v && v !== S.view) go(v); });
+
+/* ------------------------------------------------------------------ render */
+function render(){
+  var gated = S.auth !== "in" || S.denied;
+  document.body.classList.toggle("gated", gated);
+  $("co-name").textContent = company() ? company() + " · Managers' meeting" : "Managers' meeting";
+  $("tab-setup").hidden = !S.isAdmin;
+  document.querySelectorAll(".tab").forEach(function(b){ if (b.getAttribute("data-view") === S.view) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
+  renderFooter();
+  if (gated){ if ($("tv-root").innerHTML) exitTVDom(); renderGate(); return; }
+  if (S.view === "tv"){ if (!tvTimer) enterTV(); else renderTV(); return; }
+  if (S.view === "enter"){ renderEnter(); return; }
+  if (S.view === "setup"){ renderSetup(); return; }
+  renderSummary();
+}
+
+function renderGate(){
+  var main = $("main"), h = "";
+  S.formKey = null;
+  if (S.auth === "loading"){ main.innerHTML = '<div class="empty"><h3>Loading…</h3></div>'; return; }
+  if (S.auth === "noconfig"){
+    main.innerHTML = '<div class="gate"><div class="gate-card"><h2>Almost ready</h2><p class="hint">This app isn\'t connected to its database yet. Open <b>config.js</b> and paste in your Firebase settings (README, step 4), then reload this page.</p></div></div>';
+    return;
+  }
+  if (S.auth === "loadfail"){
+    main.innerHTML = '<div class="gate"><div class="gate-card"><h2>Can\'t connect</h2><p class="hint">The app couldn\'t load. Check your internet connection, then reload the page.</p></div></div>';
+    return;
+  }
+  if (S.denied){
+    main.innerHTML = '<div class="gate"><div class="gate-card"><h2>Not added yet</h2><p class="hint">You\'re signed in as <b>' + esc(S.user && S.user.email) + '</b>, but that email hasn\'t been added to this app. Ask whoever runs the app to add it under Setup, then tap Check again.</p>' +
+      '<div class="toolbar"><button class="btn primary" type="button" data-act="recheck">Check again</button><button class="btn" type="button" data-act="signout">Sign out</button></div></div></div>';
+    return;
+  }
+  renderLogin();
+}
+
+function renderLogin(){
+  var create = S.loginMode === "create";
+  $("main").innerHTML = '<div class="gate"><div class="gate-card">' +
+    '<h2>' + (create ? "Set up your password" : "Sign in") + '</h2>' +
+    '<p class="hint">' + (create ? "Use the email your administrator added for you, then choose a password (at least 6 characters)." : "Use your work email and the password you set up.") + '</p>' +
+    '<form id="login-form" class="form" novalidate style="gap:12px">' +
+    '<label class="fld"><span>Email</span><input id="lg-email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false"></label>' +
+    '<label class="fld"><span>Password</span><input id="lg-pw" type="password" autocomplete="' + (create ? "new-password" : "current-password") + '"></label>' +
+    (create ? '<label class="fld"><span>Type the password again</span><input id="lg-pw2" type="password" autocomplete="new-password"></label>' : "") +
+    '<button class="btn primary" type="submit" id="lg-go">' + (create ? "Create password and sign in" : "Sign in") + '</button>' +
+    '<p class="status-msg" id="lg-msg" role="status"></p></form>' +
+    '<div class="gate-links">' + (create
+      ? '<button class="linkbtn" type="button" data-act="lg-signin">Already set up? Sign in</button>'
+      : '<button class="linkbtn" type="button" data-act="lg-create">First time here? Set up your password</button><button class="linkbtn" type="button" data-act="lg-forgot">Forgot password?</button>') +
+    '</div></div></div>';
+  var em = $("lg-email");
+  em.value = S.loginEmail;
+  em.addEventListener("input", function(){ S.loginEmail = em.value; });
+  $("login-form").addEventListener("submit", function(e){ e.preventDefault(); doLogin(create); });
+}
+function loginMsg(text, cls){ var el = $("lg-msg"); if (el){ el.className = "status-msg" + (cls ? " " + cls : ""); el.textContent = text; } }
+function authError(e){
+  var c = (e && e.code) || "";
+  if (/invalid-credential|wrong-password|user-not-found|invalid-login/.test(c)) return "That email and password don't match. First time? Tap “First time here?” below.";
+  if (/email-already-in-use/.test(c)) return "That email already has a password. Sign in instead, or tap Forgot password.";
+  if (/weak-password/.test(c)) return "Pick a longer password (at least 6 characters).";
+  if (/invalid-email|missing-email/.test(c)) return "Check the email address.";
+  if (/too-many-requests/.test(c)) return "Too many tries. Wait a few minutes, or reset your password.";
+  if (/network-request-failed/.test(c)) return "No connection. Check your signal and try again.";
+  if (/operation-not-allowed|admin-restricted/.test(c)) return "New passwords are turned off for this app. Ask your administrator.";
+  return "Couldn't sign in. Please try again." + (c ? " (" + c + ")" : "");
+}
+function doLogin(create){
+  var email = $("lg-email").value.trim(), pw = $("lg-pw").value;
+  if (!email){ loginMsg("Enter your email.", "bad"); return; }
+  if (!pw){ loginMsg("Enter your password.", "bad"); return; }
+  if (create && pw !== $("lg-pw2").value){ loginMsg("The two passwords don't match.", "bad"); return; }
+  $("lg-go").disabled = true; loginMsg(create ? "Setting up…" : "Signing in…");
+  var p = create ? F.createUserWithEmailAndPassword(auth, email, pw) : F.signInWithEmailAndPassword(auth, email, pw);
+  p.then(function(){ S.loginMode = "signin"; }).catch(function(e){ var b = $("lg-go"); if (b) b.disabled = false; loginMsg(authError(e), "bad"); });
+}
+function doForgot(){
+  var email = ($("lg-email") && $("lg-email").value.trim()) || "";
+  if (!email){ loginMsg("Type your email above first, then tap Forgot password.", "bad"); return; }
+  loginMsg("Sending…");
+  F.sendPasswordResetEmail(auth, email).then(function(){
+    loginMsg("If that email has an account, a reset link is on its way. Check your spam folder too.", "ok");
+  }).catch(function(e){ loginMsg(authError(e), "bad"); });
+}
+
+var installPrompt = null;
+window.addEventListener("beforeinstallprompt", function(e){ e.preventDefault(); installPrompt = e; renderFooter(); });
+function isStandalone(){ return (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true; }
+function renderFooter(){
+  var h = "";
+  if (S.auth === "in" && S.user) h += '<span>Signed in as <b>' + esc(S.user.email) + '</b> · <button class="linkbtn" type="button" data-act="signout">Sign out</button></span>';
+  if (!isStandalone()){
+    if (installPrompt) h += '<button class="btn" type="button" data-act="install">Install app on this device</button>';
+    else if (/iphone|ipad|ipod/i.test(navigator.userAgent)) h += '<span>To install: tap the Share button, then <b>Add to Home Screen</b>.</span>';
+    else h += '<span>To install: open your browser menu and choose <b>Install app</b> or <b>Add to Home screen</b>.</span>';
+  }
+  $("foot").innerHTML = h;
+}
+
+function banners(){
+  var h = "";
+  if (S.slow) h += '<div class="banner err"><p>The reports can\'t be reached yet. Check your connection; the app keeps trying on its own.</p></div>';
+  else if (S.dbError && S.dbError !== "permission") h += '<div class="banner err"><p>Something went wrong loading the reports (' + esc(S.dbError) + '). Reload the page to try again.</p></div>';
+  if (S.isAdmin && S.configLoaded && !hasSetup()) h += '<div class="banner info"><p><b>Finish setup.</b> Confirm your departments and add each manager\'s email so they can sign in.</p><button class="btn primary" type="button" data-go="setup">Open Setup</button></div>';
+  if (S.demo) h += '<div class="banner sample"><p><b>Sample numbers.</b> No real reports are in yet, so made-up numbers fill the page to show the layout. Nothing here is saved.</p><button class="btn" type="button" data-act="demo-off">Hide sample</button></div>';
+  return h;
+}
+
+function whoIn(reps){
+  var ds=depts();
+  if (!ds.length) return "";
+  var n=ds.filter(function(d){return reps[d.id];}).length;
+  return '<section class="sec-who"><div class="sec-h"><h2>Who\'s reported</h2><span class="note">'+n+" of "+ds.length+" departments in for "+esc(monthLabel(S.month))+'</span></div><div class="chips">'+
+    ds.map(function(d){
+      var r=reps[d.id];
+      if (r) return '<span class="chip in"><span class="dot" aria-hidden="true">&#10003;</span><b>'+esc(d.name)+'</b><span class="who">'+esc(r.manager||"")+(r.updatedAt?" · "+esc(whenLabel(r.updatedAt)):"")+"</span></span>";
+      return '<span class="chip out"><span class="dot" aria-hidden="true"></span><b>'+esc(d.name)+'</b><span class="who">waiting</span></span>';
+    }).join("")+"</div></section>";
+}
+
+function revTile(label, t, k){
+  return '<div class="tile rev"><span class="lbl">'+label+'</span><span class="big">'+fmt(t[k],"usd")+' <small>'+esc(monthLabel(S.month,true))+'</small></span>'+
+    '<div class="cmp">Same month last year <b>'+fmt(t[k+"LY"],"usd")+"</b> "+pill(chg(t[k],t[k+"LY"]))+"</div>"+
+    '<div class="cmp">Year to date <b>'+fmt(t[k+"YTD"],"usd")+"</b> vs. <b>"+fmt(t[k+"YTDLY"],"usd")+"</b> "+pill(chg(t[k+"YTD"],t[k+"YTDLY"]))+"</div></div>";
+}
+function smallTiles(t){
+  return [
+    ["Jobs completed", fmt(t.jobsCompleted), "of <b>"+fmt(t.jobsCreated)+"</b> created · <b>"+fmt(ratio(t.jobsCompleted,t.jobsCreated),"pct")+"</b>"],
+    ["Estimates sold", fmt(t.estSold), "of <b>"+fmt(t.estGiven)+"</b> given · close rate <b>"+fmt(ratio(t.estSold,t.estGiven),"pct")+"</b>"],
+    ["Calls", fmt(t.callsIn)+' <small>in</small>', "<b>"+fmt(t.callsOut)+"</b> outbound · <b>"+fmt(sumN(t.callsIn,t.callsOut))+"</b> total"],
+    ["Recalls & red tags", fmt(sumN(t.recallCost,t.redTagCost),"usd"), "<b>"+fmt(t.recalls)+"</b> recalls · <b>"+fmt(t.redTags)+"</b> red tags"],
+    ["Inspections passed", fmt(t.inspPassed), isNum(t.inspDone) ? "of <b>"+fmt(t.inspDone)+"</b> · pass rate <b>"+fmt(ratio(t.inspPassed,t.inspDone),"pct")+"</b>" : "pass rate needs inspections completed"]
+  ].map(function(x){ return '<div class="tile"><span class="lbl">'+x[0]+'</span><span class="big">'+x[1]+'</span><span class="sub">'+x[2]+"</span></div>"; }).join("");
+}
+
+function tableHTML(reps, rowIds){
+  var ds=depts(), t=totals(reps);
+  var rows = ROWS;
+  if (rowIds) rows = rowIds.map(function(id){ return ROWS.filter(function(r){return r.id===id;})[0]; }).filter(Boolean);
+  var h='<table class="cmp"><thead><tr><th scope="col"></th>'+ds.map(function(d){return '<th scope="col">'+esc(d.name)+"</th>";}).join("")+'<th scope="col" class="tot">Company</th></tr></thead><tbody>';
+  rows.forEach(function(r){
+    if (r.group){ h+='<tr class="grp"><td colspan="'+(ds.length+2)+'">'+esc(r.group)+"</td></tr>"; return; }
+    var cls = r.sub ? ' class="sub"' : "";
+    h+="<tr"+cls+'><th scope="row" style="font-weight:'+(r.strong?700:500)+'">'+esc((rowIds && r.tvLabel) || r.label)+"</th>";
+    ds.forEach(function(d){
+      var rep=reps[d.id], v=rep ? r.get(rep.m) : null;
+      var c = r.f==="chg" ? dir(v) : (isNum(v)?"":"na");
+      h+='<td class="'+c+'">'+(rep?fmt(v,r.f):"")+"</td>";
+    });
+    var tv=r.get(t), tc=r.f==="chg"?dir(tv):"";
+    h+='<td class="tot '+tc+'">'+fmt(tv,r.f)+"</td></tr>";
+  });
+  return h+"</tbody></table>";
+}
+
+function listBlock(rep, l, max){
+  var items = rep ? rep.lists[l.k] : [];
+  var more = 0;
+  if (max && items.length>max){ more=items.length-max; items=items.slice(0,max); }
+  return '<div class="lst '+l.kind+'"><h4><i aria-hidden="true"></i>'+esc(l.label)+"</h4>"+
+    (items.length ? "<ul>"+items.map(function(x){return "<li>"+esc(x)+"</li>";}).join("")+(more?'<li><i>+ '+more+" more</i></li>":"")+"</ul>" : '<p class="none">None listed</p>')+"</div>";
+}
+
+
+function renderSummary(){
+  var reps = shown(), ds = depts(), main = $("main"), t = totals(reps);
+  var h = '<div class="stack">' + banners();
+  if (isLoading()){ main.innerHTML = h + '<div class="empty"><h3>Loading reports…</h3></div></div>'; return; }
+  if (!ds.length){
+    main.innerHTML = h + '<div class="empty"><h3>No departments set up yet</h3><p>' + (S.isAdmin ? 'Open <button class="linkbtn" type="button" data-go="setup">Setup</button> to add your departments and managers.' : "The administrator still needs to add the departments.") + "</p></div></div>";
+    return;
+  }
+  var count = Object.keys(reps).length;
+  h += '<div class="print-head"><h2>' + esc(company() ? company() + " — " : "") + "Managers' Meeting</h2><span>" + esc(monthLabel(S.month)) + " · " + count + " of " + ds.length + " departments reported</span></div>";
+  h += whoIn(reps);
+  if (!count){
+    h += '<div class="empty"><h3>No reports for ' + esc(monthLabel(S.month)) + ' yet</h3><p>Managers add theirs under <button class="linkbtn" type="button" data-go="enter">Enter report</button>.' +
+      ' <button class="linkbtn" type="button" data-act="demo-on">Preview with sample numbers</button></p></div></div>';
+    main.innerHTML = h; return;
+  }
+  h += '<section><div class="sec-h"><h2>Company totals</h2><div class="toolbar"><span class="note">' + (count < ds.length ? "Includes the " + count + (count > 1 ? " departments that have" : " department that has") + " reported" : "All departments") + '</span></div></div><div class="stack" style="gap:12px"><div class="tiles-rev">' +
+    revTile("Completed jobs revenue", t, "jobsRev") + revTile("Sold estimates", t, "estRev") + '</div><div class="tiles">' + smallTiles(t) + "</div></div></section>";
+  h += '<section class="sec-table"><div class="sec-h"><h2>By department</h2><div class="toolbar">' +
+    '<button class="btn" type="button" data-act="print">Print / Save PDF</button><button class="btn" type="button" data-act="csv">Download for Excel</button>' +
+    '</div></div><div class="card tablewrap">' + tableHTML(reps) + "</div></section>";
+  h += '<section class="sec-lists"><div class="sec-h"><h2>Problems, issues & projects</h2></div><div class="depts">' +
+    ds.map(function(d){
+      var r = reps[d.id];
+      if (!r) return '<div class="dept waiting"><div class="dept-h"><h3>' + esc(d.name) + '</h3><span>No report yet</span></div></div>';
+      return '<div class="dept"><div class="dept-h"><h3>' + esc(d.name) + "</h3><span>" + esc(r.manager) + "</span></div>" + LISTS.map(function(l){ return listBlock(r, l); }).join("") + "</div>";
+    }).join("") + "</div></section>";
+  main.innerHTML = h + "</div>";
+}
+
+/* ------------------------------------------------------------------ enter report */
+function inputHTML(k, label){
+  return '<label class="fld"><span>' + esc(label) + '</span><input class="num" id="f-' + k + '" data-k="' + k + '" inputmode="' + (USD_KEYS[k] ? "decimal" : "numeric") + '" autocomplete="off" placeholder="' + (USD_KEYS[k] ? "$0" : "0") + '"></label>';
+}
+function calcHTML(id, label){ return '<div class="calc"><span>' + esc(label) + '</span><b id="c-' + id + '">—</b></div>'; }
+
+function renderEnter(){
+  var main = $("main");
+  if (isLoading()){ main.innerHTML = '<div class="empty"><h3>Loading…</h3></div>'; S.formKey = null; return; }
+  if (!hasSetup()){
+    main.innerHTML = '<div class="stack">' + banners() + '<div class="empty"><h3>No departments set up yet</h3><p>' + (S.isAdmin ? 'Open <button class="linkbtn" type="button" data-go="setup">Setup</button> to add them.' : "The administrator still needs to add the departments.") + "</p></div></div>";
+    S.formKey = null; return;
+  }
+  var ds = myDepts();
+  if (!ds.length){
+    main.innerHTML = '<div class="empty"><h3>Nothing for you to enter</h3><p>You can see every report on the Summary, but your email isn\'t assigned to a department. If that\'s wrong, ask your administrator.</p></div>';
+    S.formKey = null; return;
+  }
+  if (!ds.some(function(d){ return d.id === S.enterDept; })) S.enterDept = ds[0].id;
+  var key = S.month + "|" + S.enterDept;
+  if (S.formKey === key && $("rep-form")){ updateFormStatus(); return; }
+  S.formKey = key; S.formDirty = false; S.formStale = false;
+  var h = '<form class="form" id="rep-form" novalidate>';
+  h += '<div class="fsec"><h3>Report for ' + esc(monthLabel(S.month)) + '</h3><div class="who-grid">' +
+    '<label class="fld"><span>Department</span>' + (ds.length > 1
+      ? '<select id="f-dept">' + ds.map(function(d){ return '<option value="' + esc(d.id) + '"' + (d.id === S.enterDept ? " selected" : "") + ">" + esc(d.name) + "</option>"; }).join("") + "</select>"
+      : '<input id="f-dept-fixed" value="' + esc(ds[0].name) + '" readonly>') + "</label>" +
+    '<label class="fld"><span>Manager</span><input id="f-manager" autocomplete="name" placeholder="Your name"></label></div>' +
+    '<p class="hint" id="f-status" style="margin:10px 0 0"></p></div>';
+  h += '<div class="fsec"><h3><span class="n">1</span>Activity</h3>' + PAIRS.map(function(p){
+    return '<div class="prow"><div class="rl">' + esc(p.label) + "</div>" + inputHTML(p.a.k, p.a.label) + inputHTML(p.b.k, p.b.label) + calcHTML(p.id, p.rate.label) + "</div>";
+  }).join("") + "</div>";
+  h += '<div class="fsec"><h3><span class="n">2</span>Recalls, red tags & inspections</h3>' + QUAL.map(function(p){
+    return '<div class="prow"><div class="rl">' + esc(p.label) + "</div>" + inputHTML(p.a.k, p.a.label) + inputHTML(p.b.k, p.b.label) + (p.rate ? calcHTML(p.id, p.rate.label) : "<div></div>") + "</div>";
+  }).join("") + "</div>";
+  h += '<div class="fsec"><h3><span class="n">3</span>Revenue</h3><p class="hint">Dollar values from ServiceTitan. Whole dollars are fine.</p>' + REV.map(function(r){
+    return '<div class="revblock"><h4>' + esc(r.label) + '</h4><div class="revgrid">' +
+      inputHTML(r.k[0], "Report month") + inputHTML(r.k[1], "Same month last year") + calcHTML(r.id + "M", "Change") +
+      inputHTML(r.k[2], "Year to date") + inputHTML(r.k[3], "YTD last year") + calcHTML(r.id + "Y", "Change") + "</div></div>";
+  }).join("") + "</div>";
+  h += '<div class="fsec"><h3><span class="n">4</span>Problems, issues & projects</h3><p class="hint">One item per line.</p><div class="lists">' + LISTS.map(function(l){
+    return '<label class="fld"><span>' + esc(l.label) + '</span><textarea id="f-' + l.k + '" data-l="' + l.k + '" rows="4"></textarea></label>';
+  }).join("") + "</div></div>";
+  h += '<div class="savebar"><span class="status-msg" id="save-msg"></span><div class="toolbar">' +
+    '<button class="btn danger" type="button" id="f-del" hidden>Delete report</button>' +
+    '<button class="btn primary" type="submit" id="f-save">Save report</button></div></div>';
+  h += "</form>";
+  main.innerHTML = h;
+  loadForm();
+  wireForm();
+}
+
+function currentReport(){ return S.reports[S.enterDept] || null; }
+function loadForm(){
+  var rep = currentReport(), d = depts().filter(function(x){ return x.id === S.enterDept; })[0];
+  ALL_KEYS.forEach(function(k){ var el = $("f-" + k); var v = rep ? rep.m[k] : null; el.value = isNum(v) ? (USD_KEYS[k] ? fmt(v, "usd") : fmt(v)) : ""; });
+  LISTS.forEach(function(l){ $("f-" + l.k).value = rep ? rep.lists[l.k].join("\n") : ""; });
+  $("f-manager").value = rep ? rep.manager : (d && d.manager) || "";
+  S.formDirty = false; S.formStale = false; S.loadedAt = rep ? rep.updatedAt : "";
+  updateCalcs(); updateFormStatus();
+}
+function readForm(){
+  var m = {}, lists = {};
+  ALL_KEYS.forEach(function(k){ m[k] = parseNum($("f-" + k).value); });
+  LISTS.forEach(function(l){ lists[l.k] = $("f-" + l.k).value.split("\n").map(function(s){ return s.trim(); }).filter(Boolean).slice(0, 40); });
+  return {m:m, lists:lists, manager:$("f-manager").value.trim().slice(0, 80)};
+}
+function setCalc(id, v, f){ var el = $("c-" + id); if (!el) return; el.textContent = fmt(v, f); el.className = f === "chg" ? dir(v) : ""; }
+function updateCalcs(){
+  var m = readForm().m;
+  PAIRS.concat(QUAL).forEach(function(p){ if (p.rate) setCalc(p.id, p.rate.fn(m), p.rate.f); });
+  REV.forEach(function(r){ setCalc(r.id + "M", chg(m[r.k[0]], m[r.k[1]]), "chg"); setCalc(r.id + "Y", chg(m[r.k[2]], m[r.k[3]]), "chg"); });
+}
+function updateFormStatus(){
+  var st = $("f-status"); if (!st) return;
+  var rep = currentReport();
+  var msg = rep ? "Last saved " + esc(whenLabel(rep.updatedAt)) + ". Saving again replaces it." : "Nothing saved yet for this department and month.";
+  if (S.formStale) msg += ' <b>Someone just saved a newer copy.</b> <button class="linkbtn" type="button" id="f-reload">Load it</button> (your unsaved changes would be lost)';
+  st.innerHTML = msg;
+  var r = $("f-reload"); if (r) r.onclick = function(){ loadForm(); };
+  var del = $("f-del"); if (del) del.hidden = !rep;
+  var sm = $("save-msg");
+  if (sm){ sm.className = "status-msg" + (S.saveMsg ? " " + S.saveMsg.cls : ""); sm.textContent = S.saveMsg ? S.saveMsg.text : (S.formDirty ? "Unsaved changes" : ""); }
+}
+function wireForm(){
+  var form = $("rep-form");
+  form.addEventListener("input", function(e){
+    S.formDirty = true; S.saveMsg = null;
+    if (e.target.classList.contains("num")) updateCalcs();
+    updateFormStatus();
+  });
+  form.addEventListener("focusout", function(e){
+    var el = e.target; if (!el.classList || !el.classList.contains("num")) return;
+    var v = parseNum(el.value), k = el.getAttribute("data-k");
+    if (v != null) el.value = USD_KEYS[k] ? fmt(Math.max(0, v), "usd") : fmt(Math.max(0, v));
+  });
+  var sel = $("f-dept");
+  if (sel) sel.addEventListener("change", function(e){
+    var v = e.target.value; e.target.value = S.enterDept;
+    guardDirty(function(){ S.enterDept = v; store("mmr-dept", v); S.formKey = null; S.saveMsg = null; renderEnter(); });
+  });
+  form.addEventListener("submit", function(e){ e.preventDefault(); save(); });
+  $("f-del").addEventListener("click", function(){
+    var d = depts().filter(function(x){ return x.id === S.enterDept; })[0];
+    modal("Delete this report?", "This removes the " + (d ? d.name : "") + " report for " + monthLabel(S.month) + " for everyone.", "Delete report", function(){
+      F.remove(F.ref(fdb, "mmr/reports/" + S.month + "/" + S.enterDept)).then(function(){ S.saveMsg = {cls:"ok", text:"Report deleted."}; S.formKey = null; renderEnter(); })
+        .catch(function(){ S.saveMsg = {cls:"bad", text:"Couldn't delete. Try again."}; updateFormStatus(); });
+    }, true);
+  });
+}
+function save(){
+  if (!fdb || S.saving) return;
+  var f = readForm(), m = {}, lists = {};
+  ALL_KEYS.forEach(function(k){ if (isNum(f.m[k])) m[k] = Math.max(0, f.m[k]); });
+  LISTS.forEach(function(l){ if (f.lists[l.k].length) lists[l.k] = f.lists[l.k]; });
+  var doc = {manager:f.manager, m:m, lists:lists, updatedAt:new Date().toISOString(), updatedBy:(S.user && S.user.email) || ""};
+  var month = S.month, dept = S.enterDept;
+  S.saving = true; $("f-save").disabled = true; S.saveMsg = {cls:"", text:"Saving…"}; updateFormStatus();
+  var waitTimer = setTimeout(function(){ if (S.saving){ S.saveMsg = {cls:"", text:"Waiting for a connection… it will save automatically when you're back online."}; updateFormStatus(); } }, 4000);
+  F.set(F.ref(fdb, "mmr/reports/" + month + "/" + dept), doc).then(function(){
+    clearTimeout(waitTimer);
+    S.saving = false; S.formDirty = false; S.formStale = false; S.loadedAt = doc.updatedAt;
+    if (S.demoAuto){ S.demo = false; S.demoAuto = false; }
+    S.saveMsg = {cls:"ok", text:"Saved. Everyone can see it on the Summary now."};
+    var b = $("f-save"); if (b) b.disabled = false; updateFormStatus();
+  }).catch(function(err){
+    clearTimeout(waitTimer);
+    S.saving = false; var b = $("f-save"); if (b) b.disabled = false;
+    S.saveMsg = errText(err) === "permission"
+      ? {cls:"bad", text:"You don't have permission to save this department. Ask your administrator."}
+      : {cls:"bad", text:"Couldn't save. Check your connection and press Save again."};
+    updateFormStatus();
+  });
+}
+function onReportsChanged(){
+  if (S.view === "enter" && $("rep-form") && S.formKey === S.month + "|" + S.enterDept){
+    var rep = currentReport();
+    var newer = rep && rep.updatedAt && rep.updatedAt !== S.loadedAt;
+    if (newer && !S.formDirty && !S.saving) loadForm();
+    else if (newer && S.formDirty && !S.saving){ S.formStale = true; updateFormStatus(); }
+    else updateFormStatus();
+    return;
+  }
+  render();
+}
+
+/* ------------------------------------------------------------------ setup (administrator) */
+var setupDraft = null;
+function splitEmails(s){ return String(s || "").toLowerCase().split(/[\s,;]+/).map(function(x){ return x.trim(); }).filter(Boolean); }
+function validEmail(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && !/[#$\[\]\/]/.test(e); }
+function appLink(){ return location.href.split("#")[0]; }
+function renderSetup(){
+  var main = $("main");
+  if (!S.isAdmin){ main.innerHTML = '<div class="empty"><h3>Setup is for the administrator</h3></div>'; return; }
+  if (isLoading()){ main.innerHTML = '<div class="empty"><h3>Loading…</h3></div>'; return; }
+  if (!setupDraft){
+    var src = hasSetup() ? depts() : DEFAULT_DEPTS;
+    setupDraft = {
+      company: company(),
+      departments: src.map(function(d){ return {id:d.id, name:d.name, manager:d.manager || "", emails:d.emails || ""}; }),
+      viewers: toArray(S.config && S.config.viewers).join("\n")
+    };
+  }
+  var h = '<div class="stack">';
+  if (!hasSetup()) h += '<div class="banner info"><p><b>First-time setup.</b> These departments are filled in to start. Add each manager\'s email, then tap <b>Save setup</b>.</p></div>';
+  h += '<div class="fsec"><h3>Company</h3><label class="fld"><span>Company name (shown at the top and on printouts)</span><input id="s-co" value="' + esc(setupDraft.company) + '" placeholder="Your company name"></label></div>';
+  h += '<div class="fsec"><h3>Departments & managers</h3><p class="hint">Each department gets one report per month. Only the emails listed for a department can enter its report. Two people sharing a department? Separate emails with a comma.</p><div id="s-rows">' +
+    setupDraft.departments.map(function(d, i){
+      return '<div class="drow">' +
+        '<label class="fld"><span>Department</span><input data-i="' + i + '" data-f="name" value="' + esc(d.name) + '"></label>' +
+        '<label class="fld"><span>Manager name</span><input data-i="' + i + '" data-f="manager" value="' + esc(d.manager) + '" placeholder="Name"></label>' +
+        '<label class="fld em"><span>Manager email</span><input data-i="' + i + '" data-f="emails" value="' + esc(d.emails) + '" placeholder="name@company.com" inputmode="email" autocapitalize="off" spellcheck="false"></label>' +
+        '<div class="btns"><button class="iconbtn" type="button" data-mv="' + i + '" data-d="-1" aria-label="Move ' + esc(d.name) + ' up"' + (i === 0 ? " disabled" : "") + '>&#8593;</button>' +
+        '<button class="iconbtn" type="button" data-mv="' + i + '" data-d="1" aria-label="Move ' + esc(d.name) + ' down"' + (i === setupDraft.departments.length - 1 ? " disabled" : "") + '>&#8595;</button>' +
+        '<button class="iconbtn" type="button" data-rm="' + i + '" aria-label="Remove ' + esc(d.name) + '">&#10005;</button></div></div>';
+    }).join("") + '</div><div class="toolbar" style="margin-top:10px"><button class="btn" type="button" id="s-add">+ Add department</button></div></div>';
+  h += '<div class="fsec"><h3>Others who can view</h3><p class="hint">People who should see the Summary but don\'t enter a report: owners, office staff, or the account signed in on the wall TV. One email per line.</p><label class="fld"><span>Emails</span><textarea id="s-viewers" rows="4" autocapitalize="off" spellcheck="false" placeholder="owner@company.com">' + esc(setupDraft.viewers) + '</textarea></label></div>';
+  h += '<div class="fsec"><h3>Inviting managers</h3><p class="hint" style="margin:0 0 10px">Send each person this link. They open it, tap <b>First time here? Set up your password</b>, and use the email listed above. Then they can add it to their home screen.</p>' +
+    '<div class="linkrow"><code id="s-link">' + esc(appLink()) + '</code><button class="btn" type="button" data-act="copylink">Copy link</button></div></div>';
+  h += '<div class="savebar"><span class="status-msg' + (S.setupMsg ? " " + S.setupMsg.cls : "") + '" id="s-msg">' + (S.setupMsg ? esc(S.setupMsg.text) : "") + '</span><button class="btn primary" type="button" id="s-save">Save setup</button></div></div>';
+  main.innerHTML = h;
+  function edited(){ if (S.setupMsg){ S.setupMsg = null; var m = $("s-msg"); if (m){ m.className = "status-msg"; m.textContent = ""; } } }
+  $("s-co").oninput = function(e){ setupDraft.company = e.target.value; edited(); };
+  $("s-viewers").oninput = function(e){ setupDraft.viewers = e.target.value; edited(); };
+  main.querySelectorAll("#s-rows input").forEach(function(el){ el.oninput = function(){ setupDraft.departments[+el.getAttribute("data-i")][el.getAttribute("data-f")] = el.value; edited(); }; });
+  main.querySelectorAll("[data-mv]").forEach(function(b){ b.onclick = function(){ var i = +b.getAttribute("data-mv"), j = i + (+b.getAttribute("data-d")); var a = setupDraft.departments; var t = a[i]; a[i] = a[j]; a[j] = t; renderSetup(); }; });
+  main.querySelectorAll("[data-rm]").forEach(function(b){ b.onclick = function(){ setupDraft.departments.splice(+b.getAttribute("data-rm"), 1); renderSetup(); }; });
+  $("s-add").onclick = function(){ setupDraft.departments.push({id:"", name:"", manager:"", emails:""}); renderSetup(); var ins = main.querySelectorAll('#s-rows input[data-f="name"]'); if (ins.length) ins[ins.length - 1].focus(); };
+  $("s-save").onclick = saveSetup;
+}
+function saveSetup(){
+  var used = {}, out = [], members = {}, bad = [];
+  function addMember(e, deptId){
+    if (!validEmail(e)){ bad.push(e); return; }
+    var k = ekey(e);
+    members[k] = members[k] || {email:e};
+    if (deptId){ members[k].depts = members[k].depts || {}; members[k].depts[deptId] = true; }
+    else members[k].view = true;
+  }
+  setupDraft.departments.forEach(function(d){
+    var name = String(d.name || "").trim(); if (!name) return;
+    var id = d.id || slug(name), base = id, n = 2;
+    while (used[id]) id = base + "-" + (n++);
+    used[id] = 1; d.id = id;
+    var emails = splitEmails(d.emails);
+    emails.forEach(function(e){ addMember(e, id); });
+    out.push({id:id, name:name.slice(0, 40), manager:String(d.manager || "").trim().slice(0, 80), emails:emails.join(", ")});
+  });
+  var viewers = splitEmails(setupDraft.viewers);
+  viewers.forEach(function(e){ addMember(e, null); });
+  var msg = $("s-msg");
+  if (!out.length){ msg.className = "status-msg bad"; msg.textContent = "Add at least one department."; return; }
+  if (bad.length){ msg.className = "status-msg bad"; msg.textContent = "Check these emails: " + bad.join(", "); return; }
+  msg.className = "status-msg"; msg.textContent = "Saving…";
+  var cfg = {company:String(setupDraft.company || "").trim().slice(0, 80), departments:out, viewers:viewers.filter(validEmail), updatedAt:new Date().toISOString()};
+  F.update(F.ref(fdb, "mmr"), {config:cfg, members:members}).then(function(){
+    S.setupMsg = {cls:"ok", text:"Saved."}; setupDraft = null; renderSetup();
+  }).catch(function(err){
+    msg.className = "status-msg bad";
+    msg.textContent = errText(err) === "permission" ? "Couldn't save: the database rules don't list your email as the administrator (README, step 2)." : "Couldn't save. Check your connection and try again.";
+  });
+}
+
+/* ------------------------------------------------------------------ modal */
+function modal(title, body, okLabel, onOk, danger){
+  var root=$("modal-root");
+  root.innerHTML='<div class="modal-bg" role="dialog" aria-modal="true" aria-labelledby="mdl-t"><div class="modal"><h3 id="mdl-t">'+esc(title)+'</h3><p>'+esc(body)+'</p><div class="row"><button class="btn" type="button" id="mdl-no">Cancel</button><button class="btn '+(danger?"danger":"primary")+'" type="button" id="mdl-ok">'+esc(okLabel)+'</button></div></div></div>';
+  function close(){ root.innerHTML=""; document.removeEventListener("keydown", onKey); }
+  function onKey(e){ if (e.key==="Escape") close(); }
+  document.addEventListener("keydown", onKey);
+  $("mdl-no").onclick=close;
+  $("mdl-ok").onclick=function(){ close(); onOk(); };
+  $("mdl-ok").focus();
+}
+function guardDirty(fn){
+  if (S.view==="enter" && S.formDirty){
+    modal("Leave without saving?", "Your report for "+monthLabel(S.month)+" has changes that aren't saved yet.", "Discard changes", function(){ S.formDirty=false; fn(); }, true);
+  } else fn();
+}
+
+/* ------------------------------------------------------------------ sample data (display only, never saved) */
+function sampleReports(){
+  var mult=[1.0, 1.42, 0.63, 0.31, 0.8, 0.5, 1.1, 0.7];
+  var items = {
+    issuesDone:[["Dispatch board backlog cleared","Truck stock levels reset to standard"],["Weekend on-call rotation set","Callback process written up"],["Permit delays with county resolved"],["Pump truck hose replaced"]],
+    issuesOpen:[["Techs closing jobs in the Field app same day"],["Filter supplier lead times 2+ weeks","Need one more install crew lead"],["Panel upgrade quotes taking too long"],["Disposal site hours cut on Saturdays"]],
+    projectsDone:[["Maple St. school water heaters"],["Riverside apartments RTU change-outs"],["Warehouse lighting retrofit"],["Oak Hills subdivision inspections"]],
+    projectsOpen:[["Fall drain-cleaning promo"],["Maintenance agreement tune-up push","Hospital boiler bid"],["EV charger install program"],["Aerobic system service contracts"]]
+  };
+  var out={};
+  depts().forEach(function(d,i){
+    var k=mult[i%mult.length], j=i%4;
+    var m={
+      jobsCreated:Math.round(410*k), jobsCompleted:Math.round(386*k), estGiven:Math.round(96*k), estSold:Math.round(41*k*(1+(i%3)*0.06)),
+      callsIn:Math.round(1240*k), callsOut:Math.round(610*k), recalls:Math.max(1,Math.round(8*k)), recallCost:Math.round(2850*k),
+      redTags:Math.round(14*k*(i===1?1.4:0.5)), redTagCost:Math.round(1200*k), inspPassed:Math.round(22*k), inspDone:Math.round(24*k),
+      jobsRev:Math.round(486500*k), jobsRevLY:Math.round(452300*k*(i===2?1.08:1)), jobsRevYTD:Math.round(4318200*k), jobsRevYTDLY:Math.round(4105600*k),
+      estRev:Math.round(312400*k), estRevLY:Math.round(338900*k*(i===0?0.9:1)), estRevYTD:Math.round(2871500*k), estRevYTDLY:Math.round(2690300*k)
+    };
+    if (i===3){ m.inspPassed=null; m.inspDone=null; }
+    var lists={}; LISTS.forEach(function(l){ lists[l.k]=items[l.k][j].slice(); });
+    var names=["J. Alvarez","R. Brooks","T. Nguyen","D. Harper"];
+    out[d.id]={month:S.month, dept:d.id, manager:names[j], m:m, lists:lists, updatedAt:""};
+  });
+  return out;
+}
+function shown(){ return S.demo ? sampleReports() : S.reports; }
+function totals(reps){
+  var t={}, list=Object.keys(reps).map(function(k){return reps[k];});
+  ALL_KEYS.forEach(function(k){ t[k]=sumN.apply(null, list.map(function(r){return r.m[k];})); });
+  return t;
+}
+
+/* ------------------------------------------------------------------ TV mode */
+var tvTimer=null, tvStart=0, tvIdle=null, SLIDE_MS=20000;
+function tvSlides(){
+  var ds=depts(), reps=shown();
+  var s=[{kind:"overview"},{kind:"table"}];
+  ds.forEach(function(d){ if (reps[d.id]) s.push({kind:"dept", dept:d}); });
+  return s;
+}
+function enterTV(){
+  S.tvIndex=0; S.tvPaused=false; tvStart=Date.now(); S.tvElapsed=0;
+  var el=document.documentElement;
+  try{ var p = el.requestFullscreen && el.requestFullscreen(); if (p && p.catch) p.catch(function(){}); }catch(e){}
+  clearInterval(tvTimer);
+  tvTimer=setInterval(tick, 250);
+  document.addEventListener("keydown", tvKeys);
+  document.addEventListener("pointermove", tvWake);
+  renderTV(); tvWake();
+}
+function exitTVDom(){
+  clearInterval(tvTimer); tvTimer=null; clearTimeout(tvIdle);
+  document.removeEventListener("keydown", tvKeys);
+  document.removeEventListener("pointermove", tvWake);
+  $("tv-root").innerHTML="";
+  try{ if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function(){}); }catch(e){}
+}
+function tick(){
+  if (S.view!=="tv") return;
+  var bar=$("tv-bar");
+  if (S.tvPaused){ tvStart=Date.now()-S.tvElapsed; return; }
+  S.tvElapsed=Date.now()-tvStart;
+  if (bar) bar.style.width=(Math.min(1,S.tvElapsed/SLIDE_MS)*100)+"%";
+  if (S.tvElapsed>=SLIDE_MS) tvGo(S.tvIndex+1);
+}
+function tvGo(i){ var n=tvSlides().length; S.tvIndex=((i%n)+n)%n; tvStart=Date.now(); S.tvElapsed=0; renderTV(); }
+function tvKeys(e){
+  if (S.view!=="tv") return;
+  if (e.key==="ArrowRight") tvGo(S.tvIndex+1);
+  else if (e.key==="ArrowLeft") tvGo(S.tvIndex-1);
+  else if (e.key===" "){ e.preventDefault(); S.tvPaused=!S.tvPaused; renderTV(); }
+  else if (e.key==="Escape") go("summary");
+  tvWake();
+}
+function tvWake(){
+  var f=$("tv-foot"); if (f) f.classList.remove("hide");
+  clearTimeout(tvIdle);
+  tvIdle=setTimeout(function(){ var f2=$("tv-foot"); if (f2 && !S.tvPaused) f2.classList.add("hide"); }, 4000);
+}
+function tvTile(label, big, sub, hero){
+  return '<div class="tv-tile'+(hero?" hero":"")+'"><span class="lbl">'+label+'</span><span class="big">'+big+'</span>'+(sub?'<span class="sub">'+sub+"</span>":"")+"</div>";
+}
+function renderTV(){
+  var root=$("tv-root");
+  $("main").innerHTML="";
+  var slides=tvSlides(); if (S.tvIndex>=slides.length) S.tvIndex=0;
+  var sl=slides[S.tvIndex], reps=shown(), t=totals(reps), ds=depts();
+  var title="Company overview", body="";
+  var hasData=Object.keys(reps).length>0;
+  if (!hasData){
+    body='<div class="tv-empty"><div>No reports for '+esc(monthLabel(S.month))+' yet.<br>This screen updates as soon as managers save theirs.</div></div>';
+  } else if (sl.kind==="overview"){
+    body='<div class="tv-tiles two">'+
+      tvTile("Completed jobs revenue", usdShort(t.jobsRev), "vs. same month last year "+pill(chg(t.jobsRev,t.jobsRevLY))+" &nbsp; YTD <b>"+usdShort(t.jobsRevYTD)+"</b> "+pill(chg(t.jobsRevYTD,t.jobsRevYTDLY)), true)+
+      tvTile("Sold estimates", usdShort(t.estRev), "vs. same month last year "+pill(chg(t.estRev,t.estRevLY))+" &nbsp; YTD <b>"+usdShort(t.estRevYTD)+"</b> "+pill(chg(t.estRevYTD,t.estRevYTDLY)), true)+
+      '</div><div class="tv-tiles">'+
+      tvTile("Jobs completed", fmt(t.jobsCompleted), "of <b>"+fmt(t.jobsCreated)+"</b> created · <b>"+fmt(ratio(t.jobsCompleted,t.jobsCreated),"pct")+"</b>")+
+      tvTile("Close rate", fmt(ratio(t.estSold,t.estGiven),"pct"), "<b>"+fmt(t.estSold)+"</b> sold of <b>"+fmt(t.estGiven)+"</b> given")+
+      tvTile("Recalls & red tags", usdShort(sumN(t.recallCost,t.redTagCost)), "<b>"+fmt(t.recalls)+"</b> recalls · <b>"+fmt(t.redTags)+"</b> red tags")+
+      tvTile("Inspections passed", fmt(t.inspPassed), isNum(t.inspDone)?"of <b>"+fmt(t.inspDone)+"</b> · <b>"+fmt(ratio(t.inspPassed,t.inspDone),"pct")+"</b>":"")+
+      "</div>";
+  } else if (sl.kind==="table"){
+    title="By department";
+    body='<div class="card">'+tableHTML(reps, TV_ROWS)+"</div>";
+  } else {
+    var d=sl.dept, r=reps[d.id], m=r.m;
+    title=d.name;
+    body='<div class="tv-dept"><div class="tv-tiles">'+
+      tvTile("Completed jobs $", usdShort(m.jobsRev), pill(chg(m.jobsRev,m.jobsRevLY))+" vs. last year")+
+      tvTile("YTD completed $", usdShort(m.jobsRevYTD), pill(chg(m.jobsRevYTD,m.jobsRevYTDLY))+" vs. last year")+
+      tvTile("Sold estimates $", usdShort(m.estRev), pill(chg(m.estRev,m.estRevLY))+" vs. last year")+
+      tvTile("Close rate", fmt(ratio(m.estSold,m.estGiven),"pct"), "<b>"+fmt(m.estSold)+"</b> of <b>"+fmt(m.estGiven)+"</b>")+
+      tvTile("Jobs completed", fmt(m.jobsCompleted), "of <b>"+fmt(m.jobsCreated)+"</b> created")+
+      tvTile("Recalls / red tags", fmt(m.recalls)+" / "+fmt(m.redTags), "cost <b>"+fmt(sumN(m.recallCost,m.redTagCost),"usd")+"</b>")+
+      '</div><div class="tv-lists">'+LISTS.map(function(l){return listBlock(r,l,5);}).join("")+"</div></div>";
+  }
+  var sub = sl.kind==="dept" && reps[sl.dept.id] && reps[sl.dept.id].manager ? esc(reps[sl.dept.id].manager) : (company()?esc(company()):"Managers' meeting");
+  var bodyCls = (hasData && sl.kind==="overview") ? "tv-body ov" : "tv-body";
+  root.innerHTML='<div class="tv" role="region" aria-label="Wall display">'+
+    '<div class="tv-head"><div><div class="k">'+sub+'</div><h2>'+esc(title)+(S.demo?'<span class="sample-tag">Sample numbers</span>':"")+'</h2></div>'+
+    '<div class="r"><div class="m">'+esc(monthLabel(S.month))+'</div><div class="tv-live">'+(S.demo?"":"Updates live as reports are saved")+"</div></div></div>"+
+    '<div class="'+bodyCls+'">'+body+"</div>"+
+    '<div class="tv-foot" id="tv-foot"><div class="tv-dots">'+slides.map(function(s,i){return '<button type="button" data-tv="'+i+'" aria-label="Slide '+(i+1)+'" aria-current="'+(i===S.tvIndex)+'"></button>';}).join("")+"</div>"+
+    '<button class="btn" type="button" data-act="tv-pause">'+(S.tvPaused?"Play":"Pause")+'</button><button class="btn" type="button" data-act="tv-next">Next</button><button class="btn" type="button" data-go="summary">Exit</button></div>'+
+    '<div class="tv-bar" id="tv-bar" style="width:'+(Math.min(1,(S.tvElapsed||0)/SLIDE_MS)*100)+'%"></div></div>';
+}
+
+/* ------------------------------------------------------------------ print + Excel download */
+function fileBase(){ return ((company() ? company() + " - " : "") + "Managers Meeting - " + monthLabel(S.month)).replace(/[\\\/:*?"<>|]/g, ""); }
+function csvCell(v){ var s = String(v == null ? "" : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function downloadCsv(){
+  var reps = shown(), ds = depts(), t = totals(reps), lines = [];
+  lines.push([(company() ? company() + " - " : "") + "Managers' Meeting", monthLabel(S.month)].concat(S.demo ? ["SAMPLE NUMBERS"] : []));
+  lines.push([]);
+  lines.push(["Measure"].concat(ds.map(function(d){ return d.name; }), ["Company"]));
+  lines.push(["Manager"].concat(ds.map(function(d){ return reps[d.id] ? reps[d.id].manager : ""; }), [""]));
+  ROWS.forEach(function(r){
+    if (r.group){ lines.push([r.group.toUpperCase()]); return; }
+    var raw = function(v){ if (!isNum(v)) return ""; return (r.f === "pct" || r.f === "chg") ? (v * 100).toFixed(1) + "%" : Math.round(v); };
+    lines.push([r.label].concat(ds.map(function(d){ return reps[d.id] ? raw(r.get(reps[d.id].m)) : ""; }), [raw(r.get(t))]));
+  });
+  lines.push([]);
+  LISTS.forEach(function(l){
+    lines.push([l.label.toUpperCase()]);
+    ds.forEach(function(d){ var r = reps[d.id]; (r ? r.lists[l.k] : []).forEach(function(x){ lines.push([d.name, x]); }); });
+  });
+  var csv = "﻿" + lines.map(function(a){ return a.map(csvCell).join(","); }).join("\r\n");
+  var blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = fileBase() + ".csv";
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+
+/* ------------------------------------------------------------------ global clicks */
+document.addEventListener("click", function(e){
+  var g = e.target.closest("[data-go]"); if (g){ go(g.getAttribute("data-go")); return; }
+  var a = e.target.closest("[data-act]");
+  if (a){
+    var act = a.getAttribute("data-act");
+    if (act === "demo-off"){ S.demo = false; S.demoAuto = false; render(); }
+    else if (act === "demo-on"){ S.demo = true; S.demoAuto = false; render(); }
+    else if (act === "print"){ window.print(); }
+    else if (act === "csv"){ downloadCsv(); }
+    else if (act === "signout"){ guardDirty(function(){ S.formDirty = false; if (S.view === "tv") go("summary"); F.signOut(auth).catch(function(){}); }); }
+    else if (act === "recheck"){ startData(); render(); }
+    else if (act === "lg-create"){ S.loginMode = "create"; renderLogin(); }
+    else if (act === "lg-signin"){ S.loginMode = "signin"; renderLogin(); }
+    else if (act === "lg-forgot"){ doForgot(); }
+    else if (act === "install" && installPrompt){ installPrompt.prompt(); installPrompt.userChoice.finally(function(){ installPrompt = null; renderFooter(); }); }
+    else if (act === "copylink"){
+      var done = function(ok){ var m = $("s-msg"); if (m){ m.className = "status-msg" + (ok ? " ok" : ""); m.textContent = ok ? "Link copied." : "Press and hold the link to copy it."; } };
+      try { navigator.clipboard.writeText(appLink()).then(function(){ done(true); }, function(){ done(false); }); } catch(err){ done(false); }
+    }
+    else if (act === "tv-pause"){ S.tvPaused = !S.tvPaused; renderTV(); tvWake(); }
+    else if (act === "tv-next"){ tvGo(S.tvIndex + 1); tvWake(); }
+    return;
+  }
+  var tv = e.target.closest("[data-tv]"); if (tv){ tvGo(+tv.getAttribute("data-tv")); tvWake(); }
+});
+window.addEventListener("beforeunload", function(e){ if (S.formDirty){ e.preventDefault(); e.returnValue = ""; } });
+
+/* ------------------------------------------------------------------ start */
+if ("serviceWorker" in navigator && location.protocol === "https:"){
+  window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); });
+}
+var startView = location.hash.slice(1);
+if (VIEWS.indexOf(startView) >= 0) S.view = startView;
+fillMonths();
+render();
+init();
+})();
+</script>
+</body>
+</html>
